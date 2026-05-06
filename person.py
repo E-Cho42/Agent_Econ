@@ -35,7 +35,7 @@ class Person():
             firm.inventory -= actual_units
             
     def go_to_work(self):
-        # Only work if employer still exists (safety check)
+        # Only work if employer still exists
         if self.employer:
             self.employer.inventory += self.workRate
         

@@ -75,8 +75,5 @@ class Firm:
             self.wage *= self.raises     
         if self.savings < 20000: 
             self.wage *= self.lower    
-            
-        
-        # 5. Fixed Bankruptcy logic
         if self.savings < 0 and len(self.employees) > 0:
             self.fire(rd.choice(self.employees))
