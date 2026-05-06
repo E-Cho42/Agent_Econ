@@ -4,12 +4,18 @@ import random as rd
 import numpy as np 
 
 class Firm:
-    def __init__(self):
-        self.wage = 1000 #np.random.lognormal(mean=10.7, sigma=0.5) / 12  # monthly
-        self.inventory = 1000
-        self.price = rd.uniform(100, 150)
-        self.savings = rd.uniform(500000, 2000000)
+    def __init__(self, t,wage,inventory,price,savings,price_low_lim, price_high_lim, raises, lower):
+        self.wage = wage
+        self.inventory = inventory
+        self.price = price
+        self.savings = savings
         self.employees = []
+        self.time = t
+        self.last_12_months = [self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings, self.savings,]
+        self.price_low_lim = price_low_lim
+        self.price_high_lim = price_high_lim
+        self.raises = raises
+        self.lower = lower
     
     def pay_wages(self):
         for employee in self.employees:
@@ -34,26 +40,43 @@ class Firm:
             self.savings += revenue
             self.inventory -= quantity
         else:
-            # Sell what is left
             self.savings += self.inventory * self.price
             self.inventory = 0
         
     def adjust_price(self):
-        if self.inventory < 500:
-            self.price *= 1.02 # 2% up
-        elif self.inventory > 1500:
-            self.price *= 0.98 # 2% down
+        if self.inventory < self.price_low_lim:
+            self.price *= self.raises # 2% up
+        elif self.inventory > self.price_high_lim:
+            self.price *= self.lower # 2% down
     
-    
+
     def update(self):
-        # 1. Pay wages first
+    
+        self.last_12_months.append(self.savings)
+        self.last_12_months.pop(0)
+        
+    
         self.pay_wages()
         
-        # 2. Adjust price based on demand (inventory levels)
-        self.adjust_price()
+     
+        old_val = self.last_12_months[0]
+        if old_val > 0:
+            percentChange = (self.savings - old_val) / old_val
+        else:
+            percentChange = 0
         
-        # 3. Bankruptcy logic: Only fire if savings are dangerously low
-        # and maybe try lowering wages before firing?
-        if self.savings < self.wage * 2: # Less than 2 months of payroll
-            if self.employees:
-                self.fire(rd.choice(self.employees))
+        if percentChange > 0.05:
+            self.wage *= 1.01  # Small 1% raise
+        elif percentChange < -0.05:
+            self.wage *= 0.99  # Small 1% cut
+            
+        self.adjust_price()
+        if self.savings > 500000:
+            self.wage *= self.raises     
+        if self.savings < 20000: 
+            self.wage *= self.lower    
+            
+        
+        # 5. Fixed Bankruptcy logic
+        if self.savings < 0 and len(self.employees) > 0:
+            self.fire(rd.choice(self.employees))

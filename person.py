@@ -5,17 +5,18 @@ import numpy as np
 
 #person class
 class Person():
-    def __init__(self, firms):
-        self.savings = rd.uniform(30000, 80000)
-        self.spendingRate = rd.uniform(0.6, 0.9)
-        self.employed = False
-        self.employer = None 
+    def __init__(self, firms,savings, spendingRate, employed, employer, workRate, income, bankruptSpendingRate):
+        self.savings = savings #rd.uniform(30000, 80000)
+        self.spendingRate = spendingRate #rd.uniform(0.6, 0.9)
+        self.employed = employed #False
+        self.employer = employer 
         self.firms = firms
-        self.workRate = 10
-        self.income = 0
+        self.workRate = workRate #10
+        self.income = income #0
+        self.bankruptSpendingRate = bankruptSpendingRate
 
     def buy_goods(self):
-        # Pick 3 random firms and choose the cheapest among them (prevents 1-firm monopoly)
+        # Pick 3 random firms and choose the cheapest among them 
         potential_firms = rd.sample(self.firms, min(3, len(self.firms)))
         firm = min(potential_firms, key=lambda f: f.price)
         
@@ -45,11 +46,9 @@ class Person():
             self.buy_goods()
             self.go_to_work()
         else:
-            # Unemployed people still need to eat; pick a random firm
-            spend = self.savings * 0.05
+            spend = self.savings * self.bankruptSpendingRate
             firm = rd.choice(self.firms)
             
-            # Ensure they actually "buy" items so inventory decreases
             units = int(spend // firm.price) if firm.price > 0 else 0
             if units > 0 and firm.inventory > 0:
                 actual = min(units, firm.inventory)

@@ -1,0 +1,7 @@
+Things to add:
+
+1. analysis of the data from the runs 
+2. random events to the market  
+3. real time visulaization 
+4. a way for the user to interact with the world, maybe a user firm?
+5. suggestions for the user, what to do with there firm? 
