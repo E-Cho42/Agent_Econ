@@ -6,30 +6,29 @@ from firm import Firm
 from pathlib import Path
 from Event import Event, create_events
 
-def main_expriment(runId):
+def main_expriment(runId, multiplier):
     # --- INITIALIZATION ---
-    
     #person parameters:
-    savings = rd.uniform(30000, 80000)
-    spendingRate = rd.uniform(0.6, 0.9)
+    savings = rd.uniform(30000, 80000)  * multiplier 
+    spendingRate = rd.uniform(0.6, 0.9) * multiplier
     employed = False
     employer = None 
-    workRate = 10
+    workRate = 10 *  multiplier
     income = 0
-    bankruptSpendingRate = .05
+    bankruptSpendingRate = .05 *  multiplier
     
     #firm parameters:
-    wage = 1000
-    inventory = 1000
-    price = rd.uniform(100, 150)
-    fsavings = rd.uniform(50000, 200000)
+    wage = 1000 * multiplier
+    inventory = 1000 * multiplier
+    price = rd.uniform(100, 150) *multiplier
+    fsavings = rd.uniform(50000, 200000) *  multiplier
     t = 0
     
     #interesting ones:
-    price_low_lim = 200
-    price_high_lim = 1500
-    lower = .98
-    raises = 1.02
+    price_low_lim = 200 *  multiplier
+    price_high_lim = 1500 * multiplier
+    lower = .98 *  multiplier
+    raises = 1.02 *  multiplier
     
     firms = [Firm(t, wage=wage, inventory=inventory, price=price, price_low_lim=price_low_lim, price_high_lim=price_high_lim, lower=lower, raises=raises, savings=fsavings) for _ in range(10)]
     population = [Person(firms=firms, employed=employed, savings=savings, spendingRate=spendingRate, workRate=workRate, income=income, employer=None, bankruptSpendingRate=bankruptSpendingRate) for _ in range(500)]

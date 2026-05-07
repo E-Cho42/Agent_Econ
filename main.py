@@ -8,8 +8,9 @@ from pathlib import Path
 from main_expriment import main_expriment
 
 if __name__ == "__main__":
-    for i in range(10):
-        main_expriment(i)
+    for i in range(50):
+        main_expriment(i, 1)
+    
         
         
         

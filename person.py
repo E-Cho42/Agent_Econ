@@ -24,7 +24,10 @@ class Person():
         if firm.price <= 0 or budget <= 0:
             return
         
-        units_to_buy = int(budget // firm.price)
+        try:
+            units_to_buy = int(budget // firm.price)
+        except:
+            units_to_buy = 0 
         
         if units_to_buy > 0 and firm.inventory > 0:
             actual_units = min(units_to_buy, firm.inventory)
@@ -35,7 +38,7 @@ class Person():
             firm.inventory -= actual_units
             
     def go_to_work(self):
-        # Only work if employer still exists
+        # Only work if employer still exists 
         if self.employer:
             self.employer.inventory += self.workRate
         
@@ -49,7 +52,12 @@ class Person():
             spend = self.savings * self.bankruptSpendingRate
             firm = rd.choice(self.firms)
             
-            units = int(spend // firm.price) if firm.price > 0 else 0
+            try:
+                units = int(spend // firm.price) if firm.price > 0 else 0
+            
+            except:
+                units = 0 
+                
             if units > 0 and firm.inventory > 0:
                 actual = min(units, firm.inventory)
                 cost = actual * firm.price
