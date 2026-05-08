@@ -1,16 +1,17 @@
 #imports 
-import pandas as pd
-import matplotlib.pyplot as plt
-import random as rd
-from person import Person
-from firm import Firm
-from pathlib import Path
 from main_expriment import main_expriment
+from optimize import Optimize
 
 if __name__ == "__main__":
-    for i in range(50):
-        main_expriment(i, 1)
     
+    best_params = Optimize(num_of_runs = 0)
+    
+    
+    
+    for i in range(50):
+        main_expriment(i, best_params, save_output= True)
+
+    print(best_params)
         
-        
+    
         

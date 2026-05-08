@@ -86,6 +86,74 @@ Events are logged to the output CSV and shaded on the output charts for visual a
 
 ---
 
+## Parameter Optimization via CMA-ES
+
+Initial conditions are calibrated using **Covariance Matrix Adaptation Evolution Strategy (CMA-ES)**, an industry-standard black-box optimization algorithm used in quantitative finance for strategy calibration and hyperparameter search.
+
+### Why CMA-ES
+
+CMA-ES maintains a multivariate Gaussian distribution over the parameter space. Each generation it samples candidate parameter sets, evaluates their fitness, and updates both the distribution mean and covariance matrix to sample more densely near high-performing regions. The covariance adaptation means the algorithm learns correlations between parameters — for example, that high `workRate` and high `wage` tend to interact well — and exploits those relationships in subsequent generations.
+
+This makes CMA-ES significantly more sample-efficient than grid search or random search, which matters when each evaluation requires running a full 1200-month simulation.
+
+### Fitness Function
+
+The fitness function rewards three properties simultaneously:
+
+```python
+fitness = 0.4 * sharpe_score + 0.3 * employment_score + 0.3 * firm_health
+```
+
+**Sharpe-like score** — computed from the monthly return series of average person savings:
+
+```python
+returns = [(savings[i] - savings[i-1]) / savings[i-1] for i in range(1, len(savings))]
+sharpe = mean(returns) / std(returns)
+sharpe_normalised = clip(sharpe, 0, 3) / 3
+```
+
+This directly mirrors the Sharpe ratio from quantitative finance — it rewards economies that grow *consistently*, not ones that spike and crash. A high mean return with low volatility scores highly; a volatile run-up followed by collapse scores poorly even if the terminal value is the same.
+
+**Employment score** — average employment rate across all 1200 months:
+
+```python
+employment_score = 1 - mean(unemployment_rate)
+```
+
+**Firm health** — fraction of months in which average firm savings remained positive:
+
+```python
+firm_health = sum(1 for f in firm_savings if f > 0) / len(firm_savings)
+```
+
+This penalises parameter combinations that produce high household wealth at the cost of insolvent firms — an unstable equilibrium that would eventually collapse.
+
+### Parameters Searched
+
+| Parameter | Bounds | Description |
+|-----------|--------|-------------|
+| `spendingRate` | [0.3, 1.0] | Fraction of income+savings spent monthly |
+| `workRate` | [5.0, 25.0] | Units of inventory produced per worker per month |
+| `bankruptSpendingRate` | [0.01, 0.15] | Spending rate when unemployed |
+| `wage` | [500, 3000] | Starting monthly wage |
+| `price_low_lim` | [50, 500] | Inventory threshold below which price rises |
+| `price_high_lim` | [500, 3000] | Inventory threshold above which price falls |
+| `raises` | [1.01, 1.10] | Price/wage increase multiplier |
+| `lower` | [0.90, 0.99] | Price/wage decrease multiplier |
+
+Starting savings and firm savings are excluded from the search — they are randomised at initialisation and their mean adds noise without informing structural behaviour.
+
+### Running the Optimizer
+
+```bash
+pip install cma
+python main.py
+```
+
+`main.py` calls `Optimize()` first, which runs ~200 CMA-ES evaluations to find the best parameter set, then runs a single final simulation with those parameters and `save_output=True` to produce the analysis chart and CSV.
+
+---
+
 ## Output and Analysis
 
 Each simulation run produces two files in `Analysis_Data/`:
@@ -100,13 +168,19 @@ Each simulation run produces two files in `Analysis_Data/`:
 
 ```
 AgentEcon/
-├── main.py               # Entry point — runs N experimental trials
+├── main.py               # Entry point — runs optimizer then final simulation
 ├── main_expriment.py     # Simulation loop, metrics logging, visualization
+├── optimize.py           # CMA-ES parameter optimizer
+├── score.py              # Fitness function (Sharpe + employment + firm health)
 ├── person.py             # Person agent class
 ├── firm.py               # Firm agent class
 ├── Event.py              # Event class and all macro event definitions
 └── Analysis_Data/        # Output directory for charts and CSVs
 ```
+
+**`optimize.py`** — Wraps `main_expriment` and `score` in a CMA-ES optimization loop. Searches the parameter space across ~200 evaluations with explicit bounds to prevent numerical overflow. Returns the best parameter dict found.
+
+**`score.py`** — Computes a scalar fitness value from a simulation history. Implements a Sharpe-like return quality metric, an employment score, and a firm solvency health score, combined with weighted averaging.
 
 **`person.py`** — Agent with savings, spendingRate, workRate, income, and employment status. Implements partial price comparison (samples 3 firms, buys from cheapest), inventory contribution via `go_to_work()`, and reduced survival spending when unemployed.
 
@@ -114,7 +188,7 @@ AgentEcon/
 
 **`Event.py`** — Event system with probabilistic monthly trigger (`roll()`), duration countdown (`tick()`), and symmetric start/end effect functions. All 13 macro events defined as instances of the `Event` class.
 
-**`main_expriment.py`** — Simulation loop running 1200 months per trial. Handles initial hiring, monthly firm and person updates, rehiring logic, event rolling and ticking, metrics calculation, and chart/CSV output.
+**`main_expriment.py`** — Simulation loop running 1200 months per trial. Accepts a `params` dict and a `save_output` flag. Handles initial hiring, monthly firm and person updates, rehiring logic, event rolling and ticking, metrics calculation, and optional chart/CSV output.
 
 ---
 
@@ -140,25 +214,14 @@ AgentEcon/
 Requires Python 3.x
 
 ```bash
-pip install numpy pandas matplotlib
+pip install numpy pandas matplotlib cma
 python main.py
 ```
-
----
-
-## Running Multiple Trials
-
-`main.py` runs 10 independent trials by default, each with different random seeds producing different event histories. This Monte Carlo approach allows analysis of economic resilience across varied conditions — the same economy may weather a pandemic easily in one run and collapse in another depending on the timing relative to firm savings levels.
-
-```python
-for i in range(10):
-    main_expriment(i)
-```
-
-Each trial saves independently named output files for cross-run comparison.
 
 ---
 
 ## Theoretical Grounding
 
 The model draws on several established frameworks in computational economics. The price adjustment mechanism is analogous to the cobweb model of supply and demand dynamics. The wage-price spiral mirrors cost-push and demand-pull inflation theory. The emergent wealth gap between firm and household savings reflects the classical Marxian distinction between capital accumulation and wage labor. The stochastic event system follows a Poisson process — each event has a fixed per-period probability of occurrence independent of history.
+
+The fitness function used for parameter optimization is directly analogous to risk-adjusted return metrics in quantitative finance. The Sharpe ratio component measures return quality rather than raw magnitude, penalising volatile growth paths in the same way a portfolio manager would prefer steady compounding over high-variance speculation.
